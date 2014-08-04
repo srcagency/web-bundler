@@ -55,7 +55,10 @@ Assistant.prototype.live = function(){
 	this.isLive = true;
 
 	process.stdin.setEncoding('utf8');
-	process.stdin.setRawMode(true);
+
+	if (process.stdin.setRawMode)
+		process.stdin.setRawMode(true);
+
 	process.stdin.on('readable', readStdin.bind(this));
 
 	return this;
