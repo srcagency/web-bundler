@@ -64,15 +64,18 @@ Assistant.prototype.live = function(){
 	return this;
 };
 
-Assistant.prototype.server = function( port ){
+Assistant.prototype.server = function( opts ){
 	if (this.bundleServer)
 		return;
 
-	port = port || process.env.PORT || 8030;
-	this.app = 'http://localhost:' + port;
+	opts = opts || {};
+
+	opts.port = opts.port || process.env.PORT || 8030;
+
+	this.app = 'http://localhost:' + opts.port;
 
 	this.isServerReady = false;
-	this.bundleServer = new BundleServer(this.bundler, port, serverReady.bind(this));
+	this.bundleServer = new BundleServer(this.bundler, opts, serverReady.bind(this));
 
 	return this;
 };

@@ -30,6 +30,7 @@
 		"finalhandler": "^0.1.0",
 		"find-parent-dir": "^0.3.0",
 		"uglifyify": "^2.5.0",
-		"watchify": "^1.0.1"
+		"watchify": "^1.0.1",
+		"heroku-https": "^1.0.0"
 	}
 }
