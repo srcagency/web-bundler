@@ -2,6 +2,7 @@
 
 var exec = require('child_process').exec;
 var events = require('events');
+var extend = require('extend');
 var path = require('path');
 var open = require('open');
 var inherits = require('inherits');
