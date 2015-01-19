@@ -6,7 +6,7 @@ var path = require('path');
 var open = require('open');
 var inherits = require('inherits');
 var findParentDir = require('find-parent-dir');
-var debug = require('debug')('Assistant');
+var debug = require('debug')('bundler:assistant');
 
 var Bundler = require('./Bundler');
 var BundleServer = require('./BundleServer');
@@ -17,18 +17,18 @@ inherits(Assistant, events.EventEmitter);
 
 function Assistant( opts ){
 	if (!(this instanceof Assistant))
-		throw Error('Use the new keyword');
+		return new Assistant(opts);
 
 	this.appDir = findParentDir.sync(opts.i || opts.o || path.dirname(require.main.filename), 'package.json');
 
 	this.i = opts.i || path.join(this.appDir, 'src');
 	this.o = opts.o || path.join(this.appDir, 'build');
 
-	opts.dev = opts.dev || opts.dev !== false;
-
 	this.bundler = new Bundler(this.i, this.o, {
-		dev: opts.dev,
-		uglify: !opts.dev,
+		uglify: opts.uglify !== false && (opts.uglify || opts.compress),
+		watch: opts.watch,
+		sourceMaps: opts.sourceMaps,
+		env: opts.env,
 	})
 		.on('update', buildReady.bind(this))
 		.on('updating', building.bind(this));
@@ -39,44 +39,31 @@ function Assistant( opts ){
 		debug('ready at ' + this.app);
 	});
 
+	if (opts.interactive !== false && (opts.interactive || opts.watch || opts.server)) {
+		process.stdin.setEncoding('utf8');
+
+		if (process.stdin.setRawMode)
+			process.stdin.setRawMode(true);
+
+		process.stdin.on('readable', readStdin.bind(this));
+	}
+
+	if (opts.server) {
+		opts.server = extend({
+			port: process.env.PORT || 8030
+		}, opts.server);
+
+		this.app = 'http://localhost:' + opts.server.port;
+
+		this.isServerReady = false;
+		this.bundleServer = new BundleServer(this.bundler, opts.server, serverReady.bind(this));
+	}
+
 	debug('bundling from %s to %s', this.i, this.o);
 }
 
 Assistant.prototype.build = function(){
 	this.bundler.bundle();
-	return this;
-};
-
-Assistant.prototype.live = function(){
-	if (this.isLive)
-		return;
-
-	this.bundler.live();
-	this.isLive = true;
-
-	process.stdin.setEncoding('utf8');
-
-	if (process.stdin.setRawMode)
-		process.stdin.setRawMode(true);
-
-	process.stdin.on('readable', readStdin.bind(this));
-
-	return this;
-};
-
-Assistant.prototype.server = function( opts ){
-	if (this.bundleServer)
-		return;
-
-	opts = opts || {};
-
-	opts.port = opts.port || process.env.PORT || 8030;
-
-	this.app = 'http://localhost:' + opts.port;
-
-	this.isServerReady = false;
-	this.bundleServer = new BundleServer(this.bundler, opts, serverReady.bind(this));
-
 	return this;
 };
 
@@ -94,8 +81,6 @@ Assistant.prototype.test = function(){
 };
 
 Assistant.prototype.open = function(){
-	debug('opening app');
-
 	if (this.state === 'ready')
 		open(this.app);
 	else
@@ -142,24 +127,29 @@ function readStdin( chunk ){
 		// open
 		case 'o':
 			this.open();
+			debug('opening');
 			break;
 
 		// build
 		case 'b':
 			this.build();
+			debug('building');
 			break;
 
 		// test
 		case 't':
 			this.test();
+			debug('testing');
 			break;
 
 		// quit
 		case 'q':
 			process.exit();
+			debug('closing');
 			break;
 		case '\u0003':	// Ctrl + C
 			process.exit();
+			debug('closing');
 			break;
 	}
 }

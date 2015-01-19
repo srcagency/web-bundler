@@ -8,22 +8,31 @@ var mkdirp = require('mkdirp');
 var browserify = require('browserify');
 var watchify = require('watchify');
 var uglifyify = require('uglifyify');
-var debug = require('debug')('Bundler');
+var envify = require('envify/custom');
+var debug = require('debug')('bundler:js');
 
 module.exports = Bundler;
 inherits(Bundler, events.EventEmitter);
 
 function Bundler( i, o, opts ){
 	if (!(this instanceof Bundler))
-		throw Error('Use the new keyword');
+		return new Bundler(i, o, opts);
 
 	opts = opts || {};
 
 	this.b = browserify(i, extend({
-		insertGlobals: opts.dev,
-	}, opts.browserify, watchify.args));
+		// speedier rebuilds
+		insertGlobals: (opts.watch && !opts.uglify),
 
-	if (!opts.dev && opts.uglify !== false)
+		debug: !!opts.sourceMaps,
+	}, opts.browserify, opts.watch && watchify.args));
+
+	// replace or purge references to process.env
+	this.b.transform(envify(extend({
+		_: 'purge',
+	}, opts.env)), { global: true });
+
+	if (opts.uglify)
 		this.b.transform(uglifyify, { global: true });
 
 	this.o = o;
@@ -32,8 +41,6 @@ function Bundler( i, o, opts ){
 
 	var script = o + '/' + (opts.scriptName || 'script') + '.js';
 	var tmpScript = opts.tmp && script + '.part';
-
-	// https://github.com/substack/watchify/blob/master/bin/cmd.js
 
 	this.bundle = function(){
 		this.state = 'updating';
@@ -50,22 +57,12 @@ function Bundler( i, o, opts ){
 		return this;
 	};
 
-	this.live = function( watchifyOpts ){
-		if (this._watching)
-			return;
-
-		watchify(this.b, extend({ delay: 300 }, watchifyOpts))
+	if (opts.watch) {
+		watchify(this.b, extend({ delay: 300 }, opts.watch))
 			.on('update', this.bundle.bind(this))
 			.on('bytes', setBytes.bind(this))
 			.on('time', setTime.bind(this));
-
-		this._watching = true;
-
-		function setBytes( b ){ this._bytes = b; }
-		function setTime( t ){ this._time = t }
-
-		return this;
-	};
+	}
 
 	this.on('update', onUpdate.bind(this));
 
@@ -88,7 +85,13 @@ function onUpdate(){
 	this.state = 'ready';
 
 	if (this._bytes || this._time)
-		debug('%d bytes written to %s (%d seconds)', this._bytes, this.o, this._time / 1000);
+		debug('%d bytes written to %s (%d seconds)',
+			this._bytes,
+			this.o,
+			this._time / 1000);
 	else
 		debug('bundle written to %s', this.o);
 }
+
+function setBytes( b ){ this._bytes = b; }
+function setTime( t ){ this._time = t; }
