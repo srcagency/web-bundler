@@ -1,7 +1,6 @@
 {
-	"name": "web-bundle-assistant",
-	"private": true,
-	"version": "0.0.1",
+	"name": "web-bundler",
+	"version": "0.1.0",
 	"main": "src/Assistant.js",
 	"keywords": [
 		"web",
@@ -11,13 +10,9 @@
 	],
 	"repository": {
 		"type": "git",
-		"url": "https://bitbucket.org/src-agency/web-bundle-assistant.git"
+		"url": "https://github.com/srcagency/web-bundler.git"
 	},
-	"author": {
-		"name": "Thomas Jensen",
-		"email": "thomas@src.agency",
-		"url": "http://src.agency"
-	},
+	"author": "Thomas Jensen <thomas@src.agency> (http://src.agency)",
 	"license": "MIT",
 	"dependencies": {
 		"inherits": "^2.0.1",
