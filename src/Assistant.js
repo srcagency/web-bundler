@@ -70,7 +70,16 @@ Assistant.prototype.build = function(){
 
 Assistant.prototype.test = function(){
 	debug('running "npm test"');
-	exec('npm test', { cwd: this.appDir }, function( err, stdout, stderr ){
+	return cmd('npm test', { cwd: this.appDir });
+};
+
+Assistant.prototype.edit = function(){
+	debug('opening your default editor');
+	return cmd(process.env.EDITOR + ' ' + assistant.appDir);
+};
+
+function cmd( cmd, opts ){
+	exec(cmd, opts, function( err, stdout, stderr ){
 		if (err)
 			return console.error(err);
 
@@ -79,7 +88,7 @@ Assistant.prototype.test = function(){
 	});
 
 	return this;
-};
+}
 
 Assistant.prototype.open = function(){
 	if (this.state === 'ready')
@@ -125,25 +134,26 @@ function readStdin( chunk ){
 	chunk = chunk || process.stdin.read();
 
 	switch (chunk) {
-		// open
 		case 'o':
 			this.open();
 			debug('opening');
 			break;
 
-		// build
 		case 'b':
 			this.build();
 			debug('building');
 			break;
 
-		// test
 		case 't':
 			this.test();
 			debug('testing');
 			break;
 
-		// quit
+		case 'e':
+			this.edit();
+			debug('editing');
+			break;
+
 		case 'q':
 			process.exit();
 			debug('closing');
